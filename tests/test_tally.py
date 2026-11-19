@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from tally import count, main, unique_words
+from tally import count, main, top_words, unique_words
 
 
 class CountTest(unittest.TestCase):
@@ -115,6 +115,59 @@ class UniqueTest(MainTestCase):
     def test_default_output_has_no_unique_line(self):
         _, out, _ = run(["-"], stdin=b"x X y")
         self.assertNotIn("unique", out)
+
+
+class TopTest(MainTestCase):
+    def test_most_frequent_first(self):
+        self.assertEqual(top_words("b a b c b a", 3), [("b", 3), ("a", 2), ("c", 1)])
+
+    def test_ties_broken_alphabetically(self):
+        self.assertEqual(top_words("pear apple fig pear fig apple", 3),
+                         [("apple", 2), ("fig", 2), ("pear", 2)])
+
+    def test_limits_to_n(self):
+        self.assertEqual(top_words("c b a", 2), [("a", 1), ("b", 1)])
+
+    def test_n_larger_than_distinct_words(self):
+        self.assertEqual(top_words("a A b", 10), [("a", 2), ("b", 1)])
+
+    def test_keeps_punctuation(self):
+        self.assertEqual(top_words("end end.", 5), [("end", 1), ("end.", 1)])
+
+    def test_empty_text(self):
+        self.assertEqual(top_words("", 3), [])
+
+    def test_top_flag_prints_one_per_line(self):
+        code, out, err = run(["-", "--top", "2"], stdin=b"the cat The dog the cat\n")
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(out, "6 words, 1 lines, 24 characters\n3 the\n2 cat\n")
+
+    def test_unique_and_top_order(self):
+        _, out, _ = run(["--top", "1", "--unique", "-"], stdin=b"b a b")
+        self.assertEqual(out, "3 words, 1 lines, 5 characters\n2 unique words\n2 b\n")
+
+    def test_top_on_empty_input_prints_only_default_line(self):
+        self.assertEqual(run(["-", "--top", "3"]), (0, "0 words, 0 lines, 0 characters\n", ""))
+
+    def test_rejects_zero(self):
+        code, out, err = run(["-", "--top", "0"])
+        self.assertEqual((code, out), (2, ""))
+        self.assertIn("must be at least 1", err)
+
+    def test_rejects_negative(self):
+        code, _, err = run(["-", "--top=-3"])
+        self.assertEqual(code, 2)
+        self.assertIn("must be at least 1", err)
+
+    def test_rejects_non_integer(self):
+        code, _, err = run(["-", "--top", "two"])
+        self.assertEqual(code, 2)
+        self.assertIn("not a whole number", err)
+
+    def test_requires_a_value(self):
+        code, _, err = run(["-", "--top"])
+        self.assertEqual(code, 2)
+        self.assertIn("expected one argument", err)
 
 
 class ErrorTest(MainTestCase):

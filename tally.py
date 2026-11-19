@@ -1,6 +1,7 @@
 """Count words, lines and characters in a file."""
 import argparse
 import sys
+from collections import Counter
 
 
 def count(text):
@@ -22,6 +23,22 @@ def unique_words(text):
     return len(set(words(text)))
 
 
+def top_words(text, n):
+    """Return the n most frequent (word, count) pairs, ties broken alphabetically."""
+    counts = Counter(words(text))
+    return sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:n]
+
+
+def positive_int(value):
+    try:
+        n = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a whole number: {value!r}")
+    if n < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {n}")
+    return n
+
+
 def read_text(path):
     """Return the contents of path, or of standard input if path is "-", as UTF-8."""
     if path == "-":
@@ -40,6 +57,12 @@ def parse_args(argv):
         "--unique",
         action="store_true",
         help="also print the number of distinct words (case-insensitive)",
+    )
+    parser.add_argument(
+        "--top",
+        type=positive_int,
+        metavar="N",
+        help="also print the N most frequent words with their counts",
     )
     return parser.parse_args(argv)
 
@@ -69,6 +92,9 @@ def main(argv=None):
     print(f"{c['words']} words, {c['lines']} lines, {c['chars']} characters")
     if args.unique:
         print(f"{unique_words(text)} unique words")
+    if args.top is not None:
+        for word, n in top_words(text, args.top):
+            print(f"{n} {word}")
     return 0
 
 
