@@ -10,6 +10,18 @@ def count(text):
     return {"words": len(text.split()), "lines": lines, "chars": len(text)}
 
 
+def words(text):
+    """Split text the same way count() does, lowercased for matching.
+
+    Punctuation is kept, so "end." and "end" are different words.
+    """
+    return [w.lower() for w in text.split()]
+
+
+def unique_words(text):
+    return len(set(words(text)))
+
+
 def read_text(path):
     """Return the contents of path, or of standard input if path is "-", as UTF-8."""
     if path == "-":
@@ -24,6 +36,11 @@ def parse_args(argv):
         description="Count words, lines and characters in a file.",
     )
     parser.add_argument("file", help='file to read, or "-" for standard input')
+    parser.add_argument(
+        "--unique",
+        action="store_true",
+        help="also print the number of distinct words (case-insensitive)",
+    )
     return parser.parse_args(argv)
 
 
@@ -50,6 +67,8 @@ def main(argv=None):
         return 1
     c = count(text)
     print(f"{c['words']} words, {c['lines']} lines, {c['chars']} characters")
+    if args.unique:
+        print(f"{unique_words(text)} unique words")
     return 0
 
 

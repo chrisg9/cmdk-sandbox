@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from tally import count, main
+from tally import count, main, unique_words
 
 
 class CountTest(unittest.TestCase):
@@ -89,6 +89,32 @@ class MainTest(MainTestCase):
         code, out, _ = run(["--help"])
         self.assertEqual(code, 0)
         self.assertIn("usage: tally", out)
+
+
+class UniqueTest(MainTestCase):
+    def test_unique_words_ignores_case(self):
+        self.assertEqual(unique_words("The cat the CAT dog"), 3)
+
+    def test_unique_words_keeps_punctuation(self):
+        self.assertEqual(unique_words("end end. end,"), 3)
+
+    def test_unique_words_empty(self):
+        self.assertEqual(unique_words(""), 0)
+
+    def test_unique_flag_prints_after_default_line(self):
+        path = self.write("a.txt", "a b A\nb c\n")
+        self.assertEqual(
+            run(["--unique", path]),
+            (0, "5 words, 2 lines, 10 characters\n3 unique words\n", ""),
+        )
+
+    def test_unique_flag_with_stdin(self):
+        code, out, _ = run(["-", "--unique"], stdin=b"x X y")
+        self.assertEqual((code, out), (0, "3 words, 1 lines, 5 characters\n2 unique words\n"))
+
+    def test_default_output_has_no_unique_line(self):
+        _, out, _ = run(["-"], stdin=b"x X y")
+        self.assertNotIn("unique", out)
 
 
 class ErrorTest(MainTestCase):
