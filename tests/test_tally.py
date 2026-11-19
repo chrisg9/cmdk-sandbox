@@ -91,5 +91,37 @@ class MainTest(MainTestCase):
         self.assertIn("usage: tally", out)
 
 
+class ErrorTest(MainTestCase):
+    def assertFails(self, argv, message, stdin=b""):
+        self.assertEqual(run(argv, stdin), (1, "", f"tally: {message}\n"))
+
+    def test_missing_file(self):
+        path = os.path.join(self.tmp, "nope.txt")
+        self.assertFails([path], f"no such file: {path}")
+
+    def test_directory(self):
+        self.assertFails([self.tmp], f"is a directory: {self.tmp}")
+
+    @unittest.skipIf(not hasattr(os, "geteuid") or os.geteuid() == 0,
+                     "root can read files without permission")
+    def test_unreadable_file(self):
+        path = self.write("secret.txt", "hidden\n")
+        os.chmod(path, 0)
+        self.addCleanup(os.chmod, path, 0o600)
+        self.assertFails([path], f"permission denied: {path}")
+
+    def test_invalid_utf8_file(self):
+        path = self.write("bad.txt", b"ok \xff\xfe\n")
+        self.assertFails([path], f"not valid UTF-8 text: {path}")
+
+    def test_invalid_utf8_stdin(self):
+        self.assertFails(["-"], "not valid UTF-8 text: <stdin>", stdin=b"\xff")
+
+    def test_other_os_error(self):
+        err = OSError(5, "Input/output error")
+        with mock.patch("tally.read_text", side_effect=err):
+            self.assertFails(["x"], "cannot read x: Input/output error")
+
+
 if __name__ == "__main__":
     unittest.main()

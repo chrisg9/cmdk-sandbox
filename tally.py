@@ -27,9 +27,28 @@ def parse_args(argv):
     return parser.parse_args(argv)
 
 
+def read_error(path, exc):
+    """Describe why path could not be read, in one line."""
+    name = "<stdin>" if path == "-" else path
+    if isinstance(exc, UnicodeDecodeError):
+        return f"not valid UTF-8 text: {name}"
+    if isinstance(exc, FileNotFoundError):
+        return f"no such file: {name}"
+    if isinstance(exc, PermissionError):
+        return f"permission denied: {name}"
+    if isinstance(exc, IsADirectoryError):
+        return f"is a directory: {name}"
+    return f"cannot read {name}: {exc.strerror or exc}"
+
+
 def main(argv=None):
     args = parse_args(argv)
-    c = count(read_text(args.file))
+    try:
+        text = read_text(args.file)
+    except (OSError, UnicodeDecodeError) as exc:
+        print(f"tally: {read_error(args.file, exc)}", file=sys.stderr)
+        return 1
+    c = count(text)
     print(f"{c['words']} words, {c['lines']} lines, {c['chars']} characters")
     return 0
 
