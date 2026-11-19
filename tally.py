@@ -3,7 +3,10 @@ import sys
 
 
 def count(text):
-    return {"words": len(text.split()), "lines": text.count("\n"), "chars": len(text)}
+    lines = text.count("\n")
+    if text and not text.endswith("\n"):
+        lines += 1
+    return {"words": len(text.split()), "lines": lines, "chars": len(text)}
 
 
 def main(argv):
